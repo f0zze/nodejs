@@ -1,49 +1,39 @@
 'use strict';
 const http = require('http');
-const fs = require('fs');
 const url = require('url');
+const fileUtils = require('./utils/file');
 
-var server = http.createServer((request, response) => {
+const filePath = __dirname + '/files';
 
-    //let pathname = decodeURI(url.parse(request.url).pathname);
-    let pathname = request.url;
+http.createServer((request, response) => {
+    let body = '';
+    let pathname = decodeURI(url.parse(request.url).pathname);
+
+
     switch (request.method) {
         case 'GET':
             if (pathname === '/') {
-                fs.readFile(__dirname + '/public/index.html', (err, data)=> {
-                    if (err) throw err;
-
-                    response.writeHead(200, {
-                        'Content-Type': 'text/html; charset=UTF-8'
-                    });
-                    response.end(data);
-                });
-                return;
+                fileUtils.sendFileSafe("./public/index.html", response);
             }
-            console.log(pathname);
-            fs.readFile(__dirname + `/files${pathname}`, (err, data)=> {
-                if (err) {
-                    console.log('end');
-                    response.end(404);
-                }
-
-                response.writeHead(200, {
-                    'Content-Type': 'text/html; charset=UTF-8'
-                });
-                response.end(data);
-            });
-            break;
-        case 'POST':
-            if (pathname === '/file') {
-                response.end('post');
+            if (pathname === '/file.txt') {
+                fileUtils.sendFileSafe(`${filePath}${pathname}`, response);
             }
+
             break;
         case 'DELETE':
-            if (pathname === '/file') {
-                response.end('delete');
+            if (pathname === '/file.txt') {
+                fileUtils.removeFile(`${filePath}${pathname}`, response);
+                return;
             }
+            response.end('what are you doing!?');
             break;
     }
 
 
+    request.on('data', function (chunk) {
+        body += chunk;
+        fileUtils.saveFile(`${filePath}${pathname}`, body, response);
+    });
+
 }).listen(3333);
+
